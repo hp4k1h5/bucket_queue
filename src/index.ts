@@ -12,7 +12,9 @@ export class Holder {
 
 export const holder = new Holder()
 
-export async function* q(queue: any[] | (() => any[])) {
+type queue = any[] | (() => any[])
+
+export async function* q(queue: queue) {
   let _queue: any
   if (typeof queue === 'function') {
     // fill queue from fn
@@ -36,34 +38,41 @@ export async function* q(queue: any[] | (() => any[])) {
   }
 }
 
-// async function supervise(agents) {
-// })
+interface Counter {
+  concurrent: number
+  hold: Holder
+}
 
-//   return 0
-// })
-// const counters = {
-//   agents: 0,
-//   cycle_start: new Date().getTime(),
-//   reqs: 0,
-//   cancel: () => {},
-// }
+export async function supervise(queue: queue, maxConcurrent: number) {
+  let done: boolean | undefined = false
+  let value: any
+  const _q = q(queue)
+  const counter: Counter = {
+    concurrent: 0,
+    hold: new Holder(),
+  }
 
-// let done: boolean = false
-// let agent
-// while (!done) {
-//   if (counters.agents < config.caw.agents) {
-//     ;({ done, value: agent } = await agents.next())
-//     if (done) break
+  while (true) {
+    ;({ done, value } = await _q.next())
+    if (done) break
 
-//     // if at max_rph, hold until next cycle
+    if (counter.concurrent >= maxConcurrent) {
+      counter.hold = new Holder()
+      await counter.hold.promise
+    }
+    // exec promise
+    dispatch(value, counter)
+  }
+}
 
-//     // TODO: move to assign agents determine allotted requests
-//     agent.settings.agent_time = keepTime(agent.settings, counters)
-//     dispatch(agent.epicycle, counters)
-//   } else {
-//     const time = wait(100000)
-//     counters.cancel = time.cancel
-//     await time
-//   }
-// }
-// }
+async function dispatch(fn: () => any, counter: Counter) {
+  counter.concurrent++
+  // console.log(counter.concurrent, 'counter.conc')
+
+  await fn()
+
+  counter.concurrent--
+  if (counter.hold) {
+    counter.hold.resolve()
+  }
+}
