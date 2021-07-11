@@ -14,5 +14,5 @@ extends:
 parserOptions:
   ecmaVersion: 15
   sourceType: module
-ignorePatterns:
-  - 'test/**/*.spec.ts'
+# ignorePatterns:
+#   - 'test/**/*.spec.ts'

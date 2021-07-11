@@ -1,14 +1,17 @@
 import { expect } from 'chai'
 
-import { hold } from '../src/index'
+import { Holder, holder } from '../src/index'
 
-describe('hold', () => {
-  it('should be a function', () => {
-    expect(hold).to.be.a('function')
+describe('Holder', () => {
+  it('exports a class', () => {
+    expect(Holder).to.be.a('function')
   })
 
-  it('should hold until resolved', async () => {
-    const holder = hold()
+  it('exports an instance of Holder named holder', () => {
+    expect(holder).to.be.an.instanceof(Holder)
+  })
+
+  it('holds until resolved', async () => {
     const start = new Date().getTime()
     setTimeout(() => holder.resolve(), 10)
     await holder.promise
