@@ -67,7 +67,6 @@ export async function supervise(queue: queue, maxConcurrent: number) {
 
 async function dispatch(fn: () => any, counter: Counter) {
   counter.concurrent++
-  // console.log(counter.concurrent, 'counter.conc')
 
   await fn()
 
