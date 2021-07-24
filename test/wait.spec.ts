@@ -21,4 +21,16 @@ describe('Holder', () => {
       .to.be.above(5)
       .and.below(15)
   })
+
+  it('holds until resolved -- long', async () => {
+    const holder = new Holder()
+    const start = new Date().getTime()
+    setTimeout(() => holder.resolve(), 50)
+    await holder.promise
+    const end = new Date().getTime()
+
+    expect(end - start)
+      .to.be.above(45)
+      .and.below(60)
+  })
 })

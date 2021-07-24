@@ -52,10 +52,13 @@ export async function supervise(queue: queue, maxConcurrent: number) {
     hold: new Holder(),
   }
 
+  // event loop, cancelled by async generator
   while (true) {
     ;({ done, value } = await _q.next())
     if (done) break
 
+    // check concurrent operations, hold if necessary;
+    // hold is cancelled by resolved async calls
     if (counter.concurrent >= maxConcurrent) {
       counter.hold = new Holder()
       await counter.hold.promise
@@ -63,14 +66,25 @@ export async function supervise(queue: queue, maxConcurrent: number) {
     // exec promise
     dispatch(value, counter)
   }
+
+  // await final dispatch
+  while (counter.hold && counter.concurrent > 0) {
+    // console.log('concurrent', counter.concurrent)
+    counter.hold = new Holder()
+    await counter.hold.promise
+  }
 }
 
+// increment counter, await individual async calls, decrement
+// counter, resolve hold
 async function dispatch(fn: () => any, counter: Counter) {
   counter.concurrent++
+  // console.log('++', counter.concurrent)
 
   await fn()
 
   counter.concurrent--
+  // console.log('--', counter.concurrent)
   if (counter.hold) {
     counter.hold.resolve()
   }
