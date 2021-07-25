@@ -63,7 +63,7 @@ describe('q', () => {
     // done now
     ;({ done, value } = await queue.next())
 
-    // expect(done).to.be.ok
+    expect(done).to.be.ok
     expect(value).to.equal(undefined)
   })
 })

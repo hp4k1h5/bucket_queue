@@ -15,7 +15,7 @@ export const holder = new Holder()
 type queue = any[] | (() => any[])
 
 export async function* q(queue: queue) {
-  let _queue: any
+  let _queue: queue
   if (typeof queue === 'function') {
     // fill queue from fn
     _queue = await queue()
@@ -67,9 +67,9 @@ export async function supervise(queue: queue, maxConcurrent: number) {
     dispatch(value, counter)
   }
 
-  // await final dispatch
+  // await last _n_ dispatches, ensures function returns only when all
+  // functions have finished execution
   while (counter.hold && counter.concurrent > 0) {
-    // console.log('concurrent', counter.concurrent)
     counter.hold = new Holder()
     await counter.hold.promise
   }
@@ -79,12 +79,10 @@ export async function supervise(queue: queue, maxConcurrent: number) {
 // counter, resolve hold
 async function dispatch(fn: () => any, counter: Counter) {
   counter.concurrent++
-  // console.log('++', counter.concurrent)
 
   await fn()
 
   counter.concurrent--
-  // console.log('--', counter.concurrent)
   if (counter.hold) {
     counter.hold.resolve()
   }
