@@ -150,7 +150,6 @@ describe('supervise', () => {
     function p(wait: number) {
       return new Promise<number>((res) =>
         setTimeout(() => {
-          console.log('hello')
           res(1)
         }, wait),
       )
@@ -169,19 +168,13 @@ describe('supervise', () => {
     const batchLen = 1_000
     let i = 0
     function* generator() {
-      console.log('i', i, i + batchLen)
       while (i + batchLen <= COUNT) {
-        console.log('yield')
         yield q.slice(i, (i += batchLen))
       }
     }
-    console.time('ok')
     for await (let promises of generator()) {
-      console.time('' + i)
       await Promise.all(promises)
-      console.timeEnd('' + i)
     }
-    console.timeEnd('ok')
 
     let end = new Date().getTime()
 
