@@ -1,11 +1,13 @@
 {
   "name": "bucket_queue",
-  "version": "1.0.0",
-  "description": "a leaky bucket queue for typescript",
+  "version": "0.0.1",
+  "description": "typescript bucket queue",
   "scripts": {
-    "test": "mocha -r ts-node/register test/**/*.ts"
+    "example": "node example.js",
+    "test": "mocha -r ts-node/register test/**/*.ts",
+    "build": "tsc"
   },
-  "main": "./built",
+  "main": "./dist",
   "license": "MIT",
   "private": false,
   "devDependencies": {
@@ -19,5 +21,15 @@
     "mocha": "^9.0.2",
     "ts-node": "^10.1.0",
     "typescript": "^4.3.5"
-  }
+  },
+  "files": [
+    "dist/**/*.js",
+    "example.js"
+  ],
+  "keywords": [
+    "queue",
+    "typescript",
+    "async",
+    "concurrency"
+  ]
 }

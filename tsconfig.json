@@ -1,15 +1,22 @@
 {
   "compilerOptions": {
+    "strict": true,
     "target": "ESNext",
     "module": "commonjs",
-    "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "noImplicitAny": true,
     "removeComments": true,
     "preserveConstEnums": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "outDir": "dist"
   },
-  "include": ["src/**/*", "test/**/*.spec.ts"],
-  "exclude": ["node_modules"]
+  "include": [
+    "src/**/*",
+    "test/**/*.spec.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "src/example.ts"
+  ]
 }

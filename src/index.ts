@@ -1,10 +1,13 @@
+type Resolve = (value: void) => void
+
 export class Holder {
   promise: Promise<void>
-  resolve: (value: void) => void
+  resolve: Resolve
 
   constructor() {
+    // order of these is important, else resolve clears itself
     this.resolve = () => null
-    this.promise = new Promise((resolve: (value: void) => void) => {
+    this.promise = new Promise((resolve: Resolve) => {
       this.resolve = resolve
     })
   }
@@ -12,10 +15,10 @@ export class Holder {
 
 export const holder = new Holder()
 
-type queue = any[] | (() => any[])
+type Queue = any[] | (() => any[])
 
-export async function* q(queue: queue) {
-  let _queue: queue
+export async function* q(queue: Queue) {
+  let _queue: Queue
   if (typeof queue === 'function') {
     // fill queue from fn
     _queue = await queue()
@@ -40,21 +43,35 @@ export async function* q(queue: queue) {
 
 interface Counter {
   concurrent: number
+  executed: number
   hold: Holder
+  start_time: number | null
 }
 
-export async function supervise(queue: queue, maxConcurrent: number) {
+export const counter: Counter = {
+  concurrent: 0,
+  executed: 0,
+  hold: new Holder(),
+  start_time: null,
+}
+
+export async function supervise(
+  queue: Queue,
+  maxConcurrent: number,
+  stats = false,
+) {
+  counter.start_time = new Date().getTime()
+
+  const _q = q(queue)
+
   let done: boolean | undefined = false
   let value: any
-  const _q = q(queue)
-  const counter: Counter = {
-    concurrent: 0,
-    hold: new Holder(),
-  }
 
-  // event loop, cancelled by async generator
+  // event loop
   while (true) {
     ;({ done, value } = await _q.next())
+
+    // cancelled by async generator
     if (done) break
 
     // check concurrent operations, hold if necessary;
@@ -63,12 +80,12 @@ export async function supervise(queue: queue, maxConcurrent: number) {
       counter.hold = new Holder()
       await counter.hold.promise
     }
-    // exec promise
+    // exec promise asynchronously
     dispatch(value, counter)
   }
 
-  // await last _n_ dispatches, ensures function returns only when all
-  // functions have finished execution
+  // await last _n_ dispatches
+  // ensure function returns only when all functions have finished execution
   while (counter.hold && counter.concurrent > 0) {
     counter.hold = new Holder()
     await counter.hold.promise
@@ -83,7 +100,10 @@ async function dispatch(fn: () => any, counter: Counter) {
   await fn()
 
   counter.concurrent--
+
   if (counter.hold) {
     counter.hold.resolve()
   }
+
+  counter.executed++
 }

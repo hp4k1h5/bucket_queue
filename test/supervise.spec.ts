@@ -25,8 +25,7 @@ describe('supervise', () => {
       .to.be.above(50)
       .and.below(60)
 
-    // 50 / 10 sleeps should be close to 50/10 * wait
-    // or 5 * 50 = 250ms + 20 latency
+    // 50 / 10 sleeps should be close to 50/10 * wait or 5 * 50 = 250ms
     q = new Array(50).fill(0)
     q = q.map(() => () => p(50))
 
@@ -35,7 +34,7 @@ describe('supervise', () => {
     end = new Date().getTime()
 
     expect(end - start)
-      .to.be.above(260)
+      .to.be.above(250)
       .and.below(280)
   })
 
@@ -87,8 +86,8 @@ describe('supervise', () => {
     let end = new Date().getTime()
 
     expect(end - start)
-      .to.be.above(250)
-      .and.below(310)
+      .to.be.above(220)
+      .and.below(320)
   })
 
   it('supervises other variable random sleeps', async () => {
@@ -151,43 +150,43 @@ describe('supervise', () => {
     function p(wait: number) {
       return new Promise<number>((res) =>
         setTimeout(() => {
-          // console.log('resolving', wait)
+          console.log('hello')
           res(1)
         }, wait),
       )
     }
 
-    let q = new Array(100).fill(0)
-    const rand = (): number => Math.ceil(Math.random() * 500)
+    const COUNT = 10_000
+    const SLEEP_MS = 500
+    let q = new Array(COUNT).fill(0)
+    const rand = (): number => Math.ceil(Math.random() * SLEEP_MS)
     q = q.map(() => {
       const r = rand()
       return p(r)
     })
 
-    // async function pA(promises) {
-    //   const a = Promise.all(promises)
-    //   await a
-    // }
-    // 100,000 in batches of 10,000, w/ max 50 ms per sleep
-    // expectations are built on observational norms
-    // Average longest sleep should be near max 50ms; rough guess about math
-    // 100,000/10,000 * 50ms = ~500ms
-
     let start = new Date().getTime()
+    const batchLen = 1_000
     let i = 0
-    const batchLen = 10
-    for (i; i < 100; i += batchLen) {
-      // const promises = [new Promise((res) => setTimeout(res, 50))]
-      const promises = q.slice(i, i + batchLen)
-      await Promise.allSettled(promises)
-      i += batchLen
-      console.log('i', i)
+    function* generator() {
+      console.log('i', i, i + batchLen)
+      while (i + batchLen <= COUNT) {
+        console.log('yield')
+        yield q.slice(i, (i += batchLen))
+      }
     }
+    console.time('ok')
+    for await (let promises of generator()) {
+      console.time('' + i)
+      await Promise.all(promises)
+      console.timeEnd('' + i)
+    }
+    console.timeEnd('ok')
 
     let end = new Date().getTime()
 
     expect(end - start)
-      .to.be.above(500)
-      .and.below(550)
+      .to.be.above(480)
+      .and.below(520)
   })
 })
