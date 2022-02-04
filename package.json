@@ -1,5 +1,5 @@
 {
-  "name": "bucket_queue",
+  "name": "@hp4k1h5/bucket_queue",
   "version": "0.0.1",
   "description": "typescript bucket queue",
   "scripts": {
