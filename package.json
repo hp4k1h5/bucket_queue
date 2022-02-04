@@ -1,14 +1,19 @@
 {
   "name": "@hp4k1h5/bucket_queue",
-  "version": "0.0.1",
+  "license": "MIT",
+  "version": "0.0.2",
   "description": "typescript bucket queue",
   "scripts": {
     "example": "node example.js",
     "test": "mocha -r ts-node/register test/**/*.ts",
     "build": "tsc"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/HP4k1h5/bucket_queue"
+  },
+  "homepage": "https://github.com/HP4k1h5/bucket_queue",
   "main": "./dist",
-  "license": "MIT",
   "private": false,
   "devDependencies": {
     "@types/chai": "^4.2.21",
