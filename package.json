@@ -1,7 +1,7 @@
 {
   "name": "@hp4k1h5/bucket_queue",
   "license": "MIT",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "typescript bucket queue",
   "scripts": {
     "example": "node example.js",
@@ -36,5 +36,7 @@
     "typescript",
     "async",
     "concurrency"
-  ]
+  ],
+  "author": "hp4k1h5",
+  "email": "robertwalks@gmail.com"
 }
