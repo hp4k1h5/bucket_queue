@@ -26,13 +26,14 @@ export async function* q(queue: Queue) {
     _queue = queue
   }
 
+  const drain = false
   while (_queue.length) {
     for await (let row of _queue) {
       yield row
     }
 
     // refill queue
-    if (typeof queue === 'function') {
+    if (typeof queue === 'function' && !drain) {
       _queue = await queue()
       // or end
     } else {
@@ -92,8 +93,8 @@ export async function supervise(
   }
 }
 
-// increment counter, await individual async calls, decrement
-// counter, resolve hold
+// increment counter, await individual async calls, decrement counter, resolve
+// hold, increment execution count
 async function dispatch(fn: () => any, counter: Counter) {
   counter.concurrent++
 

@@ -12,8 +12,7 @@ describe('supervise', () => {
       )
     }
 
-    // five concurrent sleeps should be close to 1 * wait
-    // or 50ms +/- 10
+    // five concurrent sleeps should be close to 1 * wait or 50ms +/- 10
     let q = new Array(5).fill(0)
     q = q.map(() => () => p(50))
 
@@ -46,20 +45,20 @@ describe('supervise', () => {
         }, wait),
       )
 
-    let q = [p(30), p(60), p(20), p(60), p(10), p(10)]
+    let q = [p(30), p(60), p(20), p(60), p(10), p(40)]
 
-    // with 4 agents running, the total should be just over 60 ms
-    // an initial block of:
-    // [p(30), p(60), p(20), p(60)]
-    // the 30 and 20 sleeps finish first and are replaced with 10 and 10 before the 60's complete
+    // with 4 agents running, the total should be just over 70 ms.
+    // in an initial block of: [p(30), p(60), p(20), p(60)], the 20
+    // sleep finishes first and is replaced with a 10; the 30 finishes next and
+    // is replaced with 40, this should be the last sleep to finish 30 + 40 = 70
     // factor in runtime and time slippage
     const start = new Date().getTime()
     await supervise(q, 4)
     const end = new Date().getTime()
 
     expect(end - start)
-      .to.be.above(59)
-      .and.below(70)
+      .to.be.above(69)
+      .and.below(80)
   })
 
   it('supervises variable random sleeps', async () => {
