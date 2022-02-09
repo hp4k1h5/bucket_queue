@@ -46,26 +46,35 @@ interface Counter {
   concurrent: number
   executed: number
   hold: Holder
-  start_time: number | null
+  start_time: number
 }
 
 export const counter: Counter = {
   hold: new Holder(),
   concurrent: 0,
   executed: 0,
-  start_time: null,
+  start_time: new Date().getTime(),
+}
+
+export interface RPM {
+  req: 1_000 | number
+  min: 1 | number
+  smooth?: false | boolean
 }
 
 export async function supervise(
   queue: Queue,
   maxConcurrent: number,
-  stats = false,
-  rpm?: { req: 1000; min: 1; smooth: false },
+  rpm?: RPM,
 ) {
   counter.start_time = new Date().getTime()
-  let rpmTarget = 1000
+  // rpm is per minute, but treated in ms inside this fn
+  const mspm = 60_000
+  let rpmsTarget = 0
+  let msprTarget = 0
   if (rpm) {
-    rpmTarget = rpm.req / rpm.min
+    rpmsTarget = rpm.req / (rpm.min * mspm)
+    msprTarget = 1 / rpmsTarget
   }
 
   const _q = q(queue)
@@ -79,21 +88,6 @@ export async function supervise(
 
     // cancelled by async generator
     if (done) break
-
-    if (rpm) {
-      const rpmObserved =
-        (counter.executed / (new Date().getTime() - counter.start_time)) *
-        60_000
-
-      const rpmDiff = rpmObserved - rpmTarget
-      if (rpmDiff > 0) {
-        let waitTime = (60_000 / rpmDiff) * rpm.req
-        if (rpm.smooth) {
-          waitTime = waitTime / maxConcurrent
-        }
-        await wait(waitTime)
-      }
-    }
 
     // check concurrent operations, hold if necessary;
     // hold is cancelled by resolved async calls
@@ -127,6 +121,40 @@ async function dispatch(fn: () => any, counter: Counter) {
   }
 
   counter.executed++
+}
+
+async function limit(
+  rpm: number,
+  counter: Counter,
+  rpmsTarget: number,
+  msprTarget: number,
+) {
+  if (rpm && counter.executed) {
+    const msDiff = new Date().getTime() - counter.start_time
+    const rpmsObserved = counter.executed / msDiff
+    const msprObserved = msDiff / counter.executed
+
+    const waitTime =
+      ((rpmsObserved + 1) / rpmsTarget) *
+      (msprObserved + (msprTarget - msprObserved))
+
+    console.log('rpmDiff', {
+      ex: counter.executed,
+      msDiff,
+      rpmsObserved,
+      rpmsTarget,
+      msprTarget,
+      msprObserved,
+      waitTime,
+    })
+
+    if (rpmsObserved > rpmsTarget) {
+      // if (rpm.smooth) {
+      //   waitTime = waitTime / maxConcurrent
+      // }
+      await wait(waitTime)
+    }
+  }
 }
 
 function wait(time: number) {
