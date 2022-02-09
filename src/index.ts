@@ -50,9 +50,9 @@ interface Counter {
 }
 
 export const counter: Counter = {
+  hold: new Holder(),
   concurrent: 0,
   executed: 0,
-  hold: new Holder(),
   start_time: null,
 }
 
@@ -60,20 +60,40 @@ export async function supervise(
   queue: Queue,
   maxConcurrent: number,
   stats = false,
+  rpm?: { req: 1000; min: 1; smooth: false },
 ) {
   counter.start_time = new Date().getTime()
+  let rpmTarget = 1000
+  if (rpm) {
+    rpmTarget = rpm.req / rpm.min
+  }
 
   const _q = q(queue)
 
   let done: boolean | undefined = false
   let value: any
 
-  // event loop
+  // main loop
   while (true) {
     ;({ done, value } = await _q.next())
 
     // cancelled by async generator
     if (done) break
+
+    if (rpm) {
+      const rpmObserved =
+        (counter.executed / (new Date().getTime() - counter.start_time)) *
+        60_000
+
+      const rpmDiff = rpmObserved - rpmTarget
+      if (rpmDiff > 0) {
+        let waitTime = (60_000 / rpmDiff) * rpm.req
+        if (rpm.smooth) {
+          waitTime = waitTime / maxConcurrent
+        }
+        await wait(waitTime)
+      }
+    }
 
     // check concurrent operations, hold if necessary;
     // hold is cancelled by resolved async calls
@@ -107,4 +127,8 @@ async function dispatch(fn: () => any, counter: Counter) {
   }
 
   counter.executed++
+}
+
+function wait(time: number) {
+  return new Promise((res) => setTimeout(() => res(true), time))
 }
