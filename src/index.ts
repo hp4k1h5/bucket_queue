@@ -130,27 +130,27 @@ async function limit(
   msprTarget: number,
   maxConcurrent: number,
 ) {
+  if (!counter.executed) return
   const msDiff = new Date().getTime() - counter.start_time || 1
   const rpmsObserved = counter.executed / msDiff
   const msprObserved = msDiff / counter.executed
 
-  let waitTime = (rpmsObserved + 1) * msprTarget - msprTarget
-  const rateDiff = rpmsObserved - rpmsTarget
-  if (rateDiff > 0) {
-    console.log('rpmDiff', {
-      ex: counter.executed,
-      msDiff,
-      rpmsObserved,
-      rpmsTarget,
-      msprTarget,
-      msprObserved,
-      waitTime,
-    })
-    // if (rpm.smooth) {
-    //   waitTime = waitTime / maxConcurrent
-    // }
-    await wait(waitTime)
-  }
+  let other = msprObserved * rpm.req
+  // let waitTime = (rpmsObserved + 1) * (msprTarget + (msprTarget - msprObserved))
+  let waitTime = (rpmsObserved + 1) * msprTarget
+
+  await wait(waitTime)
+
+  // console.log('rpmDiff', {
+  //   ex: counter.executed,
+  // })
+  //   msDiff,
+  //   rpmsObserved,
+  //   rpmsTarget,
+  //   msprTarget,
+  //   msprObserved,
+  //   waitTime,
+  // })
 }
 
 function wait(time: number) {
