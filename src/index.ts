@@ -46,30 +46,46 @@ interface Counter {
   concurrent: number
   executed: number
   hold: Holder
-  start_time: number | null
+  start_time: number
 }
 
 export const counter: Counter = {
+  hold: new Holder(),
   concurrent: 0,
   executed: 0,
-  hold: new Holder(),
-  start_time: null,
+  start_time: new Date().getTime(),
+}
+
+export interface RPM {
+  req: 1_000 | number
+  min: 1 | number
+  smooth?: false | boolean
 }
 
 export async function supervise(
   queue: Queue,
   maxConcurrent: number,
-  stats = false,
+  rpm?: RPM,
 ) {
   counter.start_time = new Date().getTime()
+  // rpm is per minute, but treated in ms inside this fn
+  const mspm = 60_000
+  let rpmsTarget = 0
+  let msprTarget = 0
+  if (rpm) {
+    rpmsTarget = rpm.req / (rpm.min * mspm)
+    msprTarget = 1 / rpmsTarget
+  }
 
   const _q = q(queue)
 
   let done: boolean | undefined = false
   let value: any
 
-  // event loop
+  // main loop
   while (true) {
+    // rate limit
+    rpm && (await limit(rpm, counter, rpmsTarget, msprTarget, maxConcurrent))
     ;({ done, value } = await _q.next())
 
     // cancelled by async generator
@@ -81,20 +97,18 @@ export async function supervise(
       counter.hold = new Holder()
       await counter.hold.promise
     }
-    // exec promise asynchronously
+    // dispatch promise asynchronously
     dispatch(value, counter)
   }
 
-  // await last _n_ dispatches
-  // ensure function returns only when all functions have finished execution
+  // await last batch of dispatches. ensure supervisor returns only when all
+  // functions have finished execution
   while (counter.hold && counter.concurrent > 0) {
     counter.hold = new Holder()
     await counter.hold.promise
   }
 }
 
-// increment counter, await individual async calls, decrement counter, resolve
-// hold, increment execution count
 async function dispatch(fn: () => any, counter: Counter) {
   counter.concurrent++
 
@@ -107,4 +121,38 @@ async function dispatch(fn: () => any, counter: Counter) {
   }
 
   counter.executed++
+}
+
+async function limit(
+  rpm: RPM,
+  counter: Counter,
+  rpmsTarget: number,
+  msprTarget: number,
+  maxConcurrent: number,
+) {
+  if (!counter.executed) return
+  const msDiff = new Date().getTime() - counter.start_time || 1
+  const rpmsObserved = counter.executed / msDiff
+  const msprObserved = msDiff / counter.executed
+
+  let other = msprObserved * rpm.req
+  // let waitTime = (rpmsObserved + 1) * (msprTarget + (msprTarget - msprObserved))
+  let waitTime = (rpmsObserved + 1) * msprTarget
+
+  await wait(waitTime)
+
+  // console.log('rpmDiff', {
+  //   ex: counter.executed,
+  // })
+  //   msDiff,
+  //   rpmsObserved,
+  //   rpmsTarget,
+  //   msprTarget,
+  //   msprObserved,
+  //   waitTime,
+  // })
+}
+
+function wait(time: number) {
+  return new Promise((res) => setTimeout(() => res(true), time))
 }

@@ -1,0 +1,17 @@
+---
+# rules & behavior
+exit: true
+fail-zero: true
+slow: 100
+timeout: 5000
+
+# reporting & output
+reporter: spec
+ui: bdd
+
+# file handling
+extension: ['spec.ts']
+recursive: true
+require: 'ts-node/register'
+
+spec: test/
