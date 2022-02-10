@@ -84,6 +84,8 @@ export async function supervise(
 
   // main loop
   while (true) {
+    // rate limit
+    rpm && (await limit(rpm, counter, rpmsTarget, msprTarget, maxConcurrent))
     ;({ done, value } = await _q.next())
 
     // cancelled by async generator
@@ -95,20 +97,18 @@ export async function supervise(
       counter.hold = new Holder()
       await counter.hold.promise
     }
-    // exec promise asynchronously
+    // dispatch promise asynchronously
     dispatch(value, counter)
   }
 
-  // await last _n_ dispatches
-  // ensure function returns only when all functions have finished execution
+  // await last batch of dispatches. ensure supervisor returns only when all
+  // functions have finished execution
   while (counter.hold && counter.concurrent > 0) {
     counter.hold = new Holder()
     await counter.hold.promise
   }
 }
 
-// increment counter, await individual async calls, decrement counter, resolve
-// hold, increment execution count
 async function dispatch(fn: () => any, counter: Counter) {
   counter.concurrent++
 
@@ -124,20 +124,19 @@ async function dispatch(fn: () => any, counter: Counter) {
 }
 
 async function limit(
-  rpm: number,
+  rpm: RPM,
   counter: Counter,
   rpmsTarget: number,
   msprTarget: number,
+  maxConcurrent: number,
 ) {
-  if (rpm && counter.executed) {
-    const msDiff = new Date().getTime() - counter.start_time
-    const rpmsObserved = counter.executed / msDiff
-    const msprObserved = msDiff / counter.executed
+  const msDiff = new Date().getTime() - counter.start_time || 1
+  const rpmsObserved = counter.executed / msDiff
+  const msprObserved = msDiff / counter.executed
 
-    const waitTime =
-      ((rpmsObserved + 1) / rpmsTarget) *
-      (msprObserved + (msprTarget - msprObserved))
-
+  let waitTime = (rpmsObserved + 1) * msprTarget - msprTarget
+  const rateDiff = rpmsObserved - rpmsTarget
+  if (rateDiff > 0) {
     console.log('rpmDiff', {
       ex: counter.executed,
       msDiff,
@@ -147,13 +146,10 @@ async function limit(
       msprObserved,
       waitTime,
     })
-
-    if (rpmsObserved > rpmsTarget) {
-      // if (rpm.smooth) {
-      //   waitTime = waitTime / maxConcurrent
-      // }
-      await wait(waitTime)
-    }
+    // if (rpm.smooth) {
+    //   waitTime = waitTime / maxConcurrent
+    // }
+    await wait(waitTime)
   }
 }
 

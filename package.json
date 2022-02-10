@@ -5,8 +5,7 @@
   "description": "typescript bucket queue",
   "scripts": {
     "example": "node example.js",
-    "tests": "mocha -r ts-node/register test/**/*.ts",
-    "test": "mocha -r ts-node/register",
+    "test": "mocha",
     "build": "tsc"
   },
   "repository": {

@@ -5,8 +5,8 @@ import { supervise, RPM } from '../src/index'
 describe('rate limit', () => {
   it('limits rate of callback execution', async () => {
     // 100 req/sec * 100 0ms waits should take 1 second
-    const rpm = { req: 100, min: 1 / 60, smooth: false }
-    const reqs = 112
+    const rpm = { req: 240, min: 1, smooth: false }
+    const reqs = 10
 
     let q = new Array(reqs).fill(0)
     q = q.map(() => r)
