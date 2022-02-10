@@ -2,7 +2,7 @@
 # rules & behavior
 exit: true
 fail-zero: true
-slow: 100
+slow: 400
 timeout: 5000
 
 # reporting & output
